@@ -1,0 +1,122 @@
+<!doctype html>
+<script src="code/chapter/18_http.js"></script>
+
+<table id="grid"></table>
+<button id="next">Next generation</button>
+
+<script>
+
+    let button = document.getElementById("next");
+
+    button.addEventListener("click", event => updateGrid());
+
+    var boxesMap = new Map();
+
+    function makeGrid() {
+        for (let row = 0; row <= 9; row++) {
+            let tableRow = document.createElement("tr");
+            tableRow.id = String(row);
+
+            for (let i = 0; i <= 9; i++) {
+                let tableData = document.createElement("td");
+                let checkBox = document.createElement("input");
+                checkBox.type = "checkbox";
+                checkBox.id = "Row:" + String(row) + " Item:" + String(i);
+
+                if (Math.random() < .5) { checkBox.checked = false; }
+                else { checkBox.checked = true; }
+
+                boxesMap.set(checkBox.id, { neighbors: [], checked: checkBox.checked });
+
+                tableData.appendChild(checkBox);
+                tableRow.appendChild(tableData);
+            }
+
+            document.getElementById("grid").append(tableRow);
+        }
+    }
+
+
+    function updateGrid() {
+        let tempMap = new Map();
+
+        //Make a copy of boxesMap
+        for (let [key, value] of boxesMap) {
+            tempMap.set(key, value);
+        }
+
+
+        //Make changes living/dead cells on tempMap according to rules of the game, not updating 
+        //the neighbors array
+        for (let [key, value] of tempMap) {
+            if (value.checked == true && value.neighbors.length < 2 || value.checked == true && value.neighbors.length > 3) { tempMap.set(key, { neighbors: value.neighbors, checked: false }) };
+
+            if (value.checked == false && value.neighbors.length == 3) { tempMap.set(key, { neighbors: value.neighbors, checked: true }) };
+        }
+
+
+
+        for (let [key, value] of tempMap) {
+            boxesMap.set(key, value);
+        }
+
+        for (let [key, value] of boxesMap) {
+            document.getElementById(String(key)).checked = value.checked;
+        }
+
+        //Clear neighbors array and re-run findLiveNeighbors function.. 
+        for (let [key, value] of boxesMap) {
+            boxesMap.set(key, { neighbors: [], checked: value.checked });
+        }
+
+        findLiveNeighbors(boxesMap);
+
+
+
+        //  for (let [key,value] of boxesMap) {
+        //    console.log("inner >>", key, value);   
+        // } 
+
+        return boxesMap; // necessary? 
+    }
+
+
+
+
+    function findLiveNeighbors(map) {
+        let tempValue;
+        for (let [key, value] of map) {
+            let row = Number(String(key).slice(4, 5));
+            let item = Number(String(key).slice(11, 12));
+
+            for (let [neighKey, neighValue] of map) {
+                let neighRow = Number(String(neighKey).slice(4, 5));
+                let neighItem = Number(String(neighKey).slice(11, 12));
+
+                if (row == neighRow && item == neighItem + 1 && neighValue.checked == true
+                    || row == neighRow && item == neighItem - 1 && neighValue.checked == true
+                    || row == neighRow - 1 && item == neighItem && neighValue.checked == true
+                    || row == neighRow - 1 && item == neighItem - 1 && neighValue.checked == true
+                    || row == neighRow - 1 && item == neighItem + 1 && neighValue.checked == true
+                    || row == neighRow + 1 && item == neighItem && neighValue.checked == true
+                    || row == neighRow - 1 && item == neighItem - 1 && neighValue.checked == true
+                    || row == neighRow + 1 && item == neighItem + 1 && neighValue.checked == true) {
+                    tempValue = value;
+                    tempValue.neighbors.push(neighKey);
+                    map.set(key, tempValue);
+                }
+            }
+        }
+        return map;
+    }
+
+    makeGrid();
+
+    findLiveNeighbors(boxesMap);
+
+//for (let [key,value] of boxesMap) {
+//    console.log("outer >>", key, value);   
+// } 
+
+
+</script>
