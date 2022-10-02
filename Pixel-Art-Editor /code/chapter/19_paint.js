@@ -1,5 +1,7 @@
 var Picture = class Picture {
   constructor(width, height, pixels) {
+
+    
     this.width = width;
     this.height = height;
     this.pixels = pixels;
