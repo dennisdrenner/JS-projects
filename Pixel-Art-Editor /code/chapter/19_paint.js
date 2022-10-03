@@ -1,18 +1,26 @@
 var Picture = class Picture {
   constructor(width, height, pixels) {
-
-    
     this.width = width;
     this.height = height;
     this.pixels = pixels;
   }
+
+  //make an empty picture of a single color. this is one long
+  //array and all the elements are the color in hex
   static empty(width, height, color) {
     let pixels = new Array(width * height).fill(color);
     return new Picture(width, height, pixels);
   }
+
+  //return the array element at x,y 
   pixel(x, y) {
     return this.pixels[x + y * this.width];
   }
+
+
+  //pixels in this case is an array of pixel objects
+  //with x,y and color properties. the pixels array
+  //just has updated pixels 
   draw(pixels) {
     let copy = this.pixels.slice();
     for (let {x, y, color} of pixels) {
@@ -21,6 +29,10 @@ var Picture = class Picture {
     return new Picture(this.width, this.height, copy);
   }
 }
+
+//first assign current state to the empty object
+//then apply action object (which has changes to the 
+//state) to the state, then return the updated state 
 
 function updateState(state, action) {
   return Object.assign({}, state, action);
@@ -38,6 +50,8 @@ function elt(type, props, ...children) {
 
 var scale = 10;
 
+//Make a new canvas.  pointerDown is the callback function
+//
 var PictureCanvas = class PictureCanvas {
   constructor(picture, pointerDown) {
     this.dom = elt("canvas", {
@@ -46,6 +60,10 @@ var PictureCanvas = class PictureCanvas {
     });
     this.syncState(picture);
   }
+
+  //If the picture hasn't changed do nothing
+  //picture is the object created by the picture class
+  //with width, height and the array of colors for all x,y
   syncState(picture) {
     if (this.picture == picture) return;
     this.picture = picture;
@@ -53,6 +71,9 @@ var PictureCanvas = class PictureCanvas {
   }
 }
 
+//Draw a new canvas
+//cx.fillStyle gets the color from the Picture 
+//cx.fillRect files scale sized square with the color 
 function drawPicture(picture, canvas, scale) {
   canvas.width = picture.width * scale;
   canvas.height = picture.height * scale;
@@ -66,21 +87,47 @@ function drawPicture(picture, canvas, scale) {
   }
 }
 
+//Function to handle the mouse button being pushed when the 
+//point is over the canvas.  
 PictureCanvas.prototype.mouse = function(downEvent, onDown) {
+  //button = 0 is the main/left mouse button so this is making
+  //sure that onmousedown is not referring to another mouse button
   if (downEvent.button != 0) return;
+  //this function (defined below) takes the mouse event 
+  //and returns position in the picture canvas
+  //returns {x: y:} object 
   let pos = pointerPosition(downEvent, this.dom);
+
+  //onDown is a function passed in above, optionally
   let onMove = onDown(pos);
+
+  //if there is no onDown function, return? 
   if (!onMove) return;
+
+//this is an event listener on mousemove which would pass the
+//event to this function. so that's what moveEvent is and how
+//the function understands moveEvent.buttons 
+
   let move = moveEvent => {
+    //note this is buttons plural, not button
+    //0 means no button or un-initialized 
+    //so if a mouseup occurs, the eventListener is deactivated here?
     if (moveEvent.buttons == 0) {
       this.dom.removeEventListener("mousemove", move);
+
+    //if the mouse goes down calculate new position
     } else {
       let newPos = pointerPosition(moveEvent, this.dom);
+      //i think this is if the mouse goes down but does not move,
+      //then don't do anything 
       if (newPos.x == pos.x && newPos.y == pos.y) return;
+      //otherwisw calculate the new position and run the 
+      //onMove handler that was passed in as an argument 
       pos = newPos;
       onMove(newPos);
     }
   };
+  // add an eventListener for a mousemove 
   this.dom.addEventListener("mousemove", move);
 };
 
