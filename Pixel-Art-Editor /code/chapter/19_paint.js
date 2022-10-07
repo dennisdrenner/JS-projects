@@ -12,7 +12,7 @@ var Picture = class Picture {
     return new Picture(width, height, pixels);
   }
 
-  //return the array element at x,y 
+  //return the array element at x,y, which is a color code in hex
   pixel(x, y) {
     return this.pixels[x + y * this.width];
   }
@@ -158,14 +158,19 @@ PictureCanvas.prototype.touch = function(startEvent,
   this.dom.addEventListener("touchend", end);
 };
 
+//this is the application?
 var PixelEditor = class PixelEditor {
   constructor(state, config) {
     let {tools, controls, dispatch} = config;
     this.state = state;
 
+//PictureCanvas class takes a picture and a pointerDown fxn
     this.canvas = new PictureCanvas(state.picture, pos => {
       let tool = tools[this.state.tool];
+      //console.log('tool', this.state.tool);
       let onMove = tool(pos, this.state, dispatch);
+
+      //this is the move handler 
       if (onMove) return pos => onMove(pos, this.state);
     });
     this.controls = controls.map(
@@ -173,7 +178,28 @@ var PixelEditor = class PixelEditor {
     this.dom = elt("div", {}, this.canvas.dom, elt("br"),
                    ...this.controls.reduce(
                      (a, c) => a.concat(" ", c.dom), []));
+
+
+   this.dom.tabIndex = '0';
+
+
+  this.dom.addEventListener("keydown", event => {
+      if (event.key == "f") {
+           this.state.tool = 'fill';
+           }
+       if (event.key == "d") {
+            this.state.tool = 'draw';
+             }
+       if (event.key == "r") {
+              this.state.tool = 'rectangle';
+             }
+       if (event.key == "p") {
+              this.state.tool = 'pick';
+             }
+       this.syncState(this.state);
+    }); 
   }
+
   syncState(state) {
     this.state = state;
     this.canvas.syncState(state.picture);
@@ -181,6 +207,7 @@ var PixelEditor = class PixelEditor {
   }
 }
 
+//Create the tool select menu 
 var ToolSelect = class ToolSelect {
   constructor(state, {tools, dispatch}) {
     this.select = elt("select", {
@@ -188,11 +215,12 @@ var ToolSelect = class ToolSelect {
     }, ...Object.keys(tools).map(name => elt("option", {
       selected: name == state.tool
     }, name)));
-    this.dom = elt("label", null, "🖌 Tool: ", this.select);
+    this.dom = elt("label", null, "Tool: ", this.select);
   }
   syncState(state) { this.select.value = state.tool; }
 }
 
+//Create color selector
 var ColorSelect = class ColorSelect {
   constructor(state, {dispatch}) {
     this.input = elt("input", {
@@ -200,11 +228,17 @@ var ColorSelect = class ColorSelect {
       value: state.color,
       onchange: () => dispatch({color: this.input.value})
     });
-    this.dom = elt("label", null, "🎨 Color: ", this.input);
+    this.dom = elt("label", null, "Color: ", this.input);
   }
   syncState(state) { this.input.value = state.color; }
 }
 
+/// Dispatches action to change pointed at pixel
+// to currently selected color 
+//Written as function inside function because the
+//dispatch fxn will change depending on tool? 
+//drawPixel is returned so it keeps on drawing
+// as the mouse moves
 function draw(pos, state, dispatch) {
   function drawPixel({x, y}, state) {
     let drawn = {x, y, color: state.color};
@@ -214,6 +248,7 @@ function draw(pos, state, dispatch) {
   return drawPixel;
 }
 
+//Draw and fill a rectangle
 function rectangle(start, state, dispatch) {
   function drawRectangle(pos) {
     let xStart = Math.min(start.x, pos.x);
@@ -261,7 +296,7 @@ var SaveButton = class SaveButton {
     this.picture = state.picture;
     this.dom = elt("button", {
       onclick: () => this.save()
-    }, "💾 Save");
+    }, "Save");
   }
   save() {
     let canvas = elt("canvas");
@@ -277,11 +312,12 @@ var SaveButton = class SaveButton {
   syncState(state) { this.picture = state.picture; }
 }
 
+
 var LoadButton = class LoadButton {
   constructor(_, {dispatch}) {
     this.dom = elt("button", {
       onclick: () => startLoad(dispatch)
-    }, "📁 Load");
+    }, "Load");
   }
   syncState() {}
 }
@@ -353,7 +389,7 @@ var UndoButton = class UndoButton {
     this.dom = elt("button", {
       onclick: () => dispatch({undo: true}),
       disabled: state.done.length == 0
-    }, "⮪ Undo");
+    }, "Undo");
   }
   syncState(state) {
     this.dom.disabled = state.done.length == 0;
