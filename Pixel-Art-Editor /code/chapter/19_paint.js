@@ -163,6 +163,8 @@ var PixelEditor = class PixelEditor {
   constructor(state, config) {
     let {tools, controls, dispatch} = config;
     this.state = state;
+    //console.log('config', config);
+    //console.log('tools', tools);
 
 //PictureCanvas class takes a picture and a pointerDown fxn
     this.canvas = new PictureCanvas(state.picture, pos => {
@@ -173,8 +175,18 @@ var PixelEditor = class PixelEditor {
       //this is the move handler 
       if (onMove) return pos => onMove(pos, this.state);
     });
+
+   // console.log("controls before", controls); 
+
+   //console.log('before', controls);
+
     this.controls = controls.map(
       Control => new Control(state, config));
+    
+    //console.log(this.controls);
+
+    // console.log("this.controls after", this.controls); 
+
     this.dom = elt("div", {}, this.canvas.dom, elt("br"),
                    ...this.controls.reduce(
                      (a, c) => a.concat(" ", c.dom), []));
@@ -184,18 +196,39 @@ var PixelEditor = class PixelEditor {
 
 
   this.dom.addEventListener("keydown", event => {
+      console.log(event.key);
+
       if (event.key == "f") {
            this.state.tool = 'fill';
            }
+     
        if (event.key == "d") {
             this.state.tool = 'draw';
              }
+
        if (event.key == "r") {
               this.state.tool = 'rectangle';
              }
+
        if (event.key == "p") {
               this.state.tool = 'pick';
              }
+       // if (event.key == "x" ) {
+       //       console.log("XXXX!!!!!");
+       //       this.state = historyUpdateState(state, {undo: true});
+        //         }
+
+
+        if (event.key == "z" && event.ctrlKey ) {
+          console.log("Control DDDDD!!!!!");
+          this.state = historyUpdateState(state, {undo: true});
+          
+             }
+ //dispatch({undo: true}) {
+  //  state = historyUpdateState(state, action);
+  //  app.syncState(state);
+  //}
+
        this.syncState(this.state);
     }); 
   }
@@ -367,18 +400,31 @@ function pictureFromImage(image) {
 
 function historyUpdateState(state, action) {
   if (action.undo == true) {
+    //if there's nothing in the done array, then just return
+    //otherwise return the first item in the done array which
+    //(i assume) is the latest saved version of the image
+    //done now equals the same array with the first item removed
     if (state.done.length == 0) return state;
     return Object.assign({}, state, {
       picture: state.done[0],
       done: state.done.slice(1),
       doneAt: 0
     });
+  // wtf is action.picture? 
+  //if we are updating the state and not with an undo
+  //and if more than a second has passed
+  //save the latest version 
   } else if (action.picture &&
              state.doneAt < Date.now() - 1000) {
     return Object.assign({}, state, action, {
       done: [state.picture, ...state.done],
       doneAt: Date.now()
     });
+
+  //we are updating the state, not with an undo
+  //and less than a second has passed just do the 
+  //action but don't bother saving the picture 
+
   } else {
     return Object.assign({}, state, action);
   }
@@ -391,6 +437,9 @@ var UndoButton = class UndoButton {
       disabled: state.done.length == 0
     }, "Undo");
   }
+
+ 
+
   syncState(state) {
     this.dom.disabled = state.done.length == 0;
   }
