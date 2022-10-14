@@ -22,7 +22,10 @@ var Picture = class Picture {
   //with x,y and color properties. the pixels array
   //just has updated pixels 
   draw(pixels) {
+    //this just makes a copy of pixels
     let copy = this.pixels.slice();
+    //this is changing just the changed pixels from the tools
+    //like draw 
     for (let {x, y, color} of pixels) {
       copy[x + y * this.width] = color;
     }
@@ -53,12 +56,13 @@ var scale = 10;
 //Make a new canvas.  pointerDown is the callback function
 //
 var PictureCanvas = class PictureCanvas {
-  constructor(picture, pointerDown) {
+  constructor(picture, doneList, pointerDown) {
     this.dom = elt("canvas", {
       onmousedown: event => this.mouse(event, pointerDown),
       ontouchstart: event => this.touch(event, pointerDown)
     });
     this.syncState(picture);
+    
   }
 
   //If the picture hasn't changed do nothing
@@ -66,14 +70,20 @@ var PictureCanvas = class PictureCanvas {
   //with width, height and the array of colors for all x,y
   syncState(picture) {
     if (this.picture == picture) return;
-    this.picture = picture;
-    drawPicture(this.picture, this.dom, scale);
+    if (saving == true) {
+        this.picture = picture;
+        drawPicture(this.picture, this.dom, scale);
+       }
+    else {
+        this.picture = picture;
+        drawPictureEfficient(this.picture, this.dom, scale);
+    }
   }
 }
 
 //Draw a new canvas
 //cx.fillStyle gets the color from the Picture 
-//cx.fillRect files scale sized square with the color 
+//cx.fillRect fills scale sized square with the color 
 function drawPicture(picture, canvas, scale) {
   canvas.width = picture.width * scale;
   canvas.height = picture.height * scale;
@@ -85,6 +95,23 @@ function drawPicture(picture, canvas, scale) {
       cx.fillRect(x * scale, y * scale, scale, scale);
     }
   }
+}
+
+function drawPictureEfficient(picture, canvas, scale) {
+  canvas.width = picture.width * scale;
+  canvas.height = picture.height * scale;
+  let cx = canvas.getContext("2d");
+  
+  //if (!oldState) { return drawPicture(picture, canvas, scale); }
+
+  for (let y = 0; y < picture.height; y++) {
+    for (let x = 0; x < picture.width; x++) {
+     // if (picture.pixel(x,y) != oldState.picture.pixel(x,y)) {
+         cx.fillStyle = picture.pixel(x, y);
+         cx.fillRect(x * scale, y * scale, scale, scale);
+       //     }
+    }
+}
 }
 
 //Function to handle the mouse button being pushed when the 
@@ -158,6 +185,7 @@ PictureCanvas.prototype.touch = function(startEvent,
   this.dom.addEventListener("touchend", end);
 };
 
+var i = 0; 
 //this is the application?
 var PixelEditor = class PixelEditor {
   constructor(state, config) {
@@ -167,9 +195,14 @@ var PixelEditor = class PixelEditor {
     //console.log('tools', tools);
 
 //PictureCanvas class takes a picture and a pointerDown fxn
-    this.canvas = new PictureCanvas(state.picture, pos => {
+    this.canvas = new PictureCanvas(state.picture, this.state.done, pos => {
       let tool = tools[this.state.tool];
+      //i+=1; 
+      //console.log('i>>', i, this.state);
       //console.log('tool', this.state.tool);
+
+      //console.log('state', state);
+
       let onMove = tool(pos, this.state, dispatch);
 
       //this is the move handler 
@@ -196,7 +229,7 @@ var PixelEditor = class PixelEditor {
 
 
   this.dom.addEventListener("keydown", event => {
-      console.log(event.key);
+     // console.log(event.key);
 
       if (event.key == "f") {
            this.state.tool = 'fill';
@@ -213,21 +246,12 @@ var PixelEditor = class PixelEditor {
        if (event.key == "p") {
               this.state.tool = 'pick';
              }
-       // if (event.key == "x" ) {
-       //       console.log("XXXX!!!!!");
-       //       this.state = historyUpdateState(state, {undo: true});
-        //         }
-
 
         if (event.key == "z" && event.ctrlKey ) {
-          console.log("Control DDDDD!!!!!");
+          //console.log("Control DDDDD!!!!!");
           this.state = historyUpdateState(state, {undo: true});
           
              }
- //dispatch({undo: true}) {
-  //  state = historyUpdateState(state, action);
-  //  app.syncState(state);
-  //}
 
        this.syncState(this.state);
     }); 
@@ -235,10 +259,11 @@ var PixelEditor = class PixelEditor {
 
   syncState(state) {
     this.state = state;
+    //console.log('state', state); 
     this.canvas.syncState(state.picture);
     for (let ctrl of this.controls) ctrl.syncState(state);
   }
-}
+}  //end of PixelEditor class
 
 //Create the tool select menu 
 var ToolSelect = class ToolSelect {
@@ -324,6 +349,8 @@ function pick(pos, state, dispatch) {
   dispatch({color: state.picture.pixel(pos.x, pos.y)});
 }
 
+var saving = false; 
+
 var SaveButton = class SaveButton {
   constructor(state) {
     this.picture = state.picture;
@@ -333,6 +360,7 @@ var SaveButton = class SaveButton {
   }
   save() {
     let canvas = elt("canvas");
+    saving = true; 
     drawPicture(this.picture, canvas, 1);
     let link = elt("a", {
       href: canvas.toDataURL(),
@@ -341,6 +369,7 @@ var SaveButton = class SaveButton {
     document.body.appendChild(link);
     link.click();
     link.remove();
+    saving = false; 
   }
   syncState(state) { this.picture = state.picture; }
 }
@@ -437,8 +466,6 @@ var UndoButton = class UndoButton {
       disabled: state.done.length == 0
     }, "Undo");
   }
-
- 
 
   syncState(state) {
     this.dom.disabled = state.done.length == 0;
