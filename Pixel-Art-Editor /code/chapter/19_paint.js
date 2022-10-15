@@ -38,8 +38,8 @@ var Picture = class Picture {
 //state) to the state, then return the updated state 
 
 function updateState(state, action) {
-  return Object.assign({}, state, action);
-}
+   return Object.assign({}, state, action);
+  }
 
 function elt(type, props, ...children) {
   let dom = document.createElement(type);
@@ -55,20 +55,31 @@ var scale = 10;
 
 //Make a new canvas.  pointerDown is the callback function
 //
+
+//var i = 0 ; 
 var PictureCanvas = class PictureCanvas {
   constructor(picture, doneList, pointerDown) {
+  //  i +=1; 
+   // console.log('doneList ', i, doneList);
+   //this.doneList = doneList; 
     this.dom = elt("canvas", {
       onmousedown: event => this.mouse(event, pointerDown),
       ontouchstart: event => this.touch(event, pointerDown)
     });
+    //everytime we make a new canvas we syncState
     this.syncState(picture);
-    
+
+    //console.log("this.syncState...new canvas")
   }
 
   //If the picture hasn't changed do nothing
   //picture is the object created by the picture class
   //with width, height and the array of colors for all x,y
-  syncState(picture) {
+  //pixeleditor syncstate fxn calls this function and also the 
+  //syncstate function for all of the controls 
+  syncState(picture, doneList) {
+    //console.log("Done List", doneList);
+
     if (this.picture == picture) return;
     if (saving == true) {
         this.picture = picture;
@@ -76,8 +87,9 @@ var PictureCanvas = class PictureCanvas {
        }
     else {
         this.picture = picture;
-        drawPictureEfficient(this.picture, this.dom, scale);
-    }
+        drawPictureEfficient(this.picture, this.dom, scale, doneList);
+        //console.log('running syncState...drawPictureEfficient');
+          }
   }
 }
 
@@ -97,21 +109,38 @@ function drawPicture(picture, canvas, scale) {
   }
 }
 
-function drawPictureEfficient(picture, canvas, scale) {
+var drawnPixels = 0; 
+var drawnPixelsNoList = 0; 
+
+function drawPictureEfficient(picture, canvas, scale, doneList) {
   canvas.width = picture.width * scale;
   canvas.height = picture.height * scale;
   let cx = canvas.getContext("2d");
-  
-  //if (!oldState) { return drawPicture(picture, canvas, scale); }
-
-  for (let y = 0; y < picture.height; y++) {
-    for (let x = 0; x < picture.width; x++) {
-     // if (picture.pixel(x,y) != oldState.picture.pixel(x,y)) {
-         cx.fillStyle = picture.pixel(x, y);
-         cx.fillRect(x * scale, y * scale, scale, scale);
-       //     }
+  //console.log(doneList);
+  if (doneList) {
+    for (let y = 0; y < picture.height; y++) {
+      for (let x = 0; x < picture.width; x++) {
+           if (picture.pixel(x,y) != doneList[0].pixel(x,y)) {   
+              cx.fillStyle = picture.pixel(x, y);
+              cx.fillRect(x * scale, y * scale, scale, scale);
+              drawnPixels +=1; 
+      }
     }
-}
+  }
+  console.log('drawnPixels', drawnPixels); 
+} 
+  
+
+  else {
+    for (let y = 0; y < picture.height; y++) {
+      for (let x = 0; x < picture.width; x++) {
+           cx.fillStyle = picture.pixel(x, y);
+           cx.fillRect(x * scale, y * scale, scale, scale);
+           drawnPixelsNoList +=1; 
+            }
+    }
+  }
+  console.log('drawnPixelsNoList', drawnPixelsNoList);
 }
 
 //Function to handle the mouse button being pushed when the 
@@ -148,7 +177,7 @@ PictureCanvas.prototype.mouse = function(downEvent, onDown) {
       //i think this is if the mouse goes down but does not move,
       //then don't do anything 
       if (newPos.x == pos.x && newPos.y == pos.y) return;
-      //otherwisw calculate the new position and run the 
+      //otherwise calculate the new position and run the 
       //onMove handler that was passed in as an argument 
       pos = newPos;
       onMove(newPos);
@@ -227,40 +256,32 @@ var PixelEditor = class PixelEditor {
 
    this.dom.tabIndex = '0';
 
-
   this.dom.addEventListener("keydown", event => {
      // console.log(event.key);
-
       if (event.key == "f") {
            this.state.tool = 'fill';
            }
-     
        if (event.key == "d") {
             this.state.tool = 'draw';
              }
-
        if (event.key == "r") {
               this.state.tool = 'rectangle';
              }
-
        if (event.key == "p") {
               this.state.tool = 'pick';
              }
-
         if (event.key == "z" && event.ctrlKey ) {
-          //console.log("Control DDDDD!!!!!");
           this.state = historyUpdateState(state, {undo: true});
-          
              }
-
        this.syncState(this.state);
     }); 
   }
 
   syncState(state) {
     this.state = state;
-    //console.log('state', state); 
-    this.canvas.syncState(state.picture);
+    //console.log('state...line 265', state); 
+    this.canvas.syncState(state.picture, state.done);
+    //console.log('this.canvas.syncState', this.canvas.syncState );
     for (let ctrl of this.controls) ctrl.syncState(state);
   }
 }  //end of PixelEditor class
@@ -300,7 +321,10 @@ var ColorSelect = class ColorSelect {
 function draw(pos, state, dispatch) {
   function drawPixel({x, y}, state) {
     let drawn = {x, y, color: state.color};
+    //I think this is updating the state of the picture
+    // but not actually drawing on the screen 
     dispatch({picture: state.picture.draw([drawn])});
+
   }
   drawPixel(pos, state);
   return drawPixel;
@@ -438,6 +462,7 @@ function historyUpdateState(state, action) {
       picture: state.done[0],
       done: state.done.slice(1),
       doneAt: 0
+      
     });
   // wtf is action.picture? 
   //if we are updating the state and not with an undo
