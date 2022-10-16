@@ -87,7 +87,9 @@ var PictureCanvas = class PictureCanvas {
        }
     else {
         this.picture = picture;
-        drawPictureEfficient(this.picture, this.dom, scale, doneList);
+        drawPicture(this.picture, this.dom, scale);
+
+       // drawPictureEfficient(this.picture, this.dom, scale, doneList);
         //console.log('running syncState...drawPictureEfficient');
           }
   }
@@ -270,6 +272,11 @@ var PixelEditor = class PixelEditor {
        if (event.key == "p") {
               this.state.tool = 'pick';
              }
+
+       if (event.key == "c") {
+              this.state.tool = 'circle';
+             }
+
         if (event.key == "z" && event.ctrlKey ) {
           this.state = historyUpdateState(state, {undo: true});
              }
@@ -371,6 +378,26 @@ function fill({x, y}, state, dispatch) {
 
 function pick(pos, state, dispatch) {
   dispatch({color: state.picture.pixel(pos.x, pos.y)});
+}
+
+//Draw a circle... 
+
+function circle(start, state, dispatch) {
+  function drawCircle(pos) {
+    let xStart = Math.min(start.x, pos.x);
+    let yStart = Math.min(start.y, pos.y);
+    let xEnd = Math.max(start.x, pos.x);
+    let yEnd = Math.max(start.y, pos.y);
+    let drawn = [];
+    for (let y = yStart; y <= yEnd; y++) {
+      for (let x = xStart; x <= xEnd; x++) {
+        drawn.push({x, y, color: state.color});
+      }
+    }
+    dispatch({picture: state.picture.draw(drawn)});
+  }
+  drawCircle(start);
+  return drawCircle;
 }
 
 var saving = false; 
@@ -505,7 +532,7 @@ var startState = {
   doneAt: 0
 };
 
-var baseTools = {draw, fill, rectangle, pick};
+var baseTools = {draw, fill, rectangle, pick, circle};
 
 var baseControls = [
   ToolSelect, ColorSelect, SaveButton, LoadButton, UndoButton
