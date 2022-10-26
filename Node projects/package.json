@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "ejs": "^3.1.8",
+    "express": "^4.18.2",
+    "ini": "^3.0.1",
+    "scrape": "^0.2.3"
+  },
+  "name": "node-projects",
+  "version": "1.0.0",
+  "description": "node homework ",
+  "main": "main.js",
+  "scripts": {
+    "devStart": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

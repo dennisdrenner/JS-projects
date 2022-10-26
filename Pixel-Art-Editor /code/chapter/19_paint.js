@@ -383,15 +383,23 @@ function pick(pos, state, dispatch) {
 //Draw a circle... 
 
 function circle(start, state, dispatch) {
+  
   function drawCircle(pos) {
     let xStart = Math.min(start.x, pos.x);
     let yStart = Math.min(start.y, pos.y);
     let xEnd = Math.max(start.x, pos.x);
     let yEnd = Math.max(start.y, pos.y);
+    let radius2 = Math.sqrt((Math.pow((xEnd - xStart), 2) + Math.pow((yEnd - yStart), 2)));
+    let radius = xEnd - xStart; 
+    console.log('radius2', radius2);
     let drawn = [];
     for (let y = yStart; y <= yEnd; y++) {
       for (let x = xStart; x <= xEnd; x++) {
-        drawn.push({x, y, color: state.color});
+        console.log("xstart, ystart, xend, yend, radius", xStart, yStart, xEnd, yEnd, radius);
+        console.log(radius2 == Math.sqrt(Math.pow((xEnd - xStart), 2) + Math.pow((yEnd - yStart), 2)));
+        if (Math.pow(radius2,2) <= (Math.pow((xEnd - xStart), 2) + Math.pow((yEnd - yStart), 2))){
+          drawn.push({x, y, color: state.color});
+        }
       }
     }
     dispatch({picture: state.picture.draw(drawn)});
